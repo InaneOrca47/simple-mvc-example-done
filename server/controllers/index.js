@@ -2,21 +2,21 @@
 const models = require('../models');
 
 // get the Cat model
-const { Cat } = models;
+const { Cat, Dog } = models;
 
 // Function to handle rendering the index page.
 const hostIndex = async (req, res) => {
   //Start with the name as unknown
   let name = 'unknown';
 
-  try{
+  try {
 
-    const doc = await Cat.findOne({}, {}, { 
-      sort: {'createdDate': 'descending'}
+    const doc = await Cat.findOne({}, {}, {
+      sort: { 'createdDate': 'descending' }
     }).lean().exec();
 
     //If we did get a cat back, store it's name in the name variable.
-    if(doc) {
+    if (doc) {
       name = doc.name;
     }
   } catch (err) {
@@ -56,17 +56,17 @@ const hostPage3 = (req, res) => {
 
 // Get name will return the name of the last added cat.
 const getName = async (req, res) => {
-  try{
-    const doc = await Cat.findOne({}).sort({'createdDate': 'descending'}).lean().exec();
+  try {
+    const doc = await Cat.findOne({}).sort({ 'createdDate': 'descending' }).lean().exec();
 
     //If we did get a cat back, store it's name in the name variable.
-    if(doc) {
-      return res.json({name: doc.name});
+    if (doc) {
+      return res.json({ name: doc.name });
     }
-    return res.status(404).json({error: 'No cat found'});
+    return res.status(404).json({ error: 'No cat found' });
   } catch (err) {
     console.log(err);
-    return res.status(500).json({error: 'Something went wrong contacting the database'});
+    return res.status(500).json({ error: 'Something went wrong contacting the database' });
   }
 }
 
@@ -146,11 +146,37 @@ const searchName = async (req, res) => {
   return res.json({ name: doc.name, beds: doc.bedsOwned });
 };
 
+const birthday = async (req, res) => {
+  if (!req.body.name) {
+    return res.status(400).json({ error: 'Name is required to perform a search' });
+  }
+
+  let doc;
+  try {
+    doc = await Dog.findOneAndUpdate(
+      { name: req.body.name }, 
+      { $inc: { 'age': 1 } }, 
+      { returnDocument: 'after' }).lean().exec();
+  } catch (err) {
+    // If there is an error, log it and send the user an error message.
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+
+  // If we do not find something that matches our search, doc will be empty.
+  if (!doc) {
+    return res.status(404).json({ error: 'No dogs found' });
+  }
+
+  // Otherwise, we got a result and will send it back to the user.
+  return res.json({ name: doc.name, breed: doc.breed, age: doc.age });
+};
+
 const updateLast = (req, res) => {
 
-  const updatePromise = Cat.findOneAndUpdate({}, {$inc: {'bedsOwned': 1}}, {
+  const updatePromise = Cat.findOneAndUpdate({}, { $inc: { 'bedsOwned': 1 } }, {
     returnDocument: 'after', //Populates doc in the .then() with the version after update
-    sort: {'createdDate': 'descending'}
+    sort: { 'createdDate': 'descending' }
   }).lean().exec();
 
   // If we successfully save/update them in the database, send back the cat's info.
@@ -181,6 +207,8 @@ module.exports = {
   page3: hostPage3,
   getName,
   setName,
+  setDog,
+  birthday,
   updateLast,
   searchName,
   notFound,
